@@ -28,10 +28,10 @@
 }
 
 .fragment-container {
-    margin-bottom: 24px;
-    padding: 16px;
+    margin-bottom: 16px;
+    padding: 12px;
     border-radius: 8px;
-    background-color: var(--background-primary-alt);
+    background-color: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
     transition: all 0.2s ease;
 }
@@ -49,14 +49,15 @@
 }
 
 .fragment-meta {
-    font-size: 0.8em;
+    font-size: 12px;
     color: var(--text-muted);
-    margin-bottom: 8px;
+    margin-top: 8px;
 }
 
 .fragment-backlink {
-    font-size: 0.85em;
-    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
 }
 
 .fragment-backlink a {
@@ -75,48 +76,79 @@
     display: flex;
     justify-content: flex-end;
     gap: 8px;
+    margin-top: 8px;
+}
+
+.fragment-actions button {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    background-color: var(--interactive-normal);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
+    transition: all 0.2s ease;
+}
+
+.fragment-actions button:hover {
+    background-color: var(--interactive-hover);
 }
 
 .fragment-actions .delete-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 8px;
-    font-size: var(--font-ui-smaller);
-    background-color: transparent;
-    color: var(--text-muted);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 150ms ease-in-out;
+    background-color: var(--background-modifier-error);
+    color: var(--text-on-accent);
 }
 
 .fragment-actions .delete-button:hover {
-    color: var(--text-on-accent);
-    background-color: var(--background-modifier-error);
-    border-color: var(--background-modifier-error);
-}
-
-.fragment-actions .delete-button:active {
     background-color: var(--background-modifier-error-hover);
-    transform: translateY(1px);
 }
 
-.fragment-actions .delete-button::before {
-    content: '';
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    margin-right: 4px;
-    background-color: currentColor;
-    -webkit-mask-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"/></svg>');
-    mask-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"/></svg>');
-    -webkit-mask-size: contain;
-    mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-    mask-position: center;
+.note-collector-view .fragment-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.note-collector-view .fragment-actions .delete-button {
+  background-color: var(--background-modifier-error);
+  color: var(--text-on-accent);
+}
+
+.note-collector-view .fragment-actions .delete-button:hover {
+  background-color: var(--background-modifier-error-hover);
+}
+
+.note-collector-view .fragment-content.selectable {
+  position: relative;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.note-collector-view .fragment-content.selectable:hover {
+  background-color: var(--background-primary-alt);
+  border-color: var(--interactive-accent);
+}
+
+.note-collector-view .fragment-content.selectable:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.note-collector-view .fragment-content.selectable[data-readonly="true"] {
+  cursor: text;
+}
+
+.note-collector-view .fragment-tip {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 4px 0;
+  font-style: italic;
 }
 
 /* 设置界面样式 */
@@ -239,4 +271,23 @@
 
 .note-collector-view::-webkit-scrollbar-thumb:hover {
     background-color: var(--interactive-accent);
+}
+
+.fragment-source-link {
+    color: var(--text-accent);
+    text-decoration: none;
+    position: relative;
+    display: inline-block;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.fragment-source-link:hover {
+    text-decoration: none;
+    background-color: var(--background-modifier-hover);
+}
+
+.fragment-source-link:active {
+    transform: translateY(1px);
 }

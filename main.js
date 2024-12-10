@@ -177,6 +177,14 @@ var NoteCollectorSettingTab = class extends import_obsidian.PluginSettingTab {
             };
             this.plugin.settings.collections.push(collection);
             await this.plugin.saveSettings();
+            
+            // 刷新所有打开的 Note Collector 视图
+            this.app.workspace.getLeavesOfType("note-collector-view").forEach((leaf) => {
+              if (leaf.view instanceof NoteCollectorView) {
+                leaf.view.onOpen(); // 使用 onOpen 来完全重新初始化视图
+              }
+            });
+            
             this.display();
           }
         }
@@ -194,6 +202,14 @@ var NoteCollectorSettingTab = class extends import_obsidian.PluginSettingTab {
               collection.name = result.name;
               collection.description = result.description;
               await this.plugin.saveSettings();
+              
+              // 刷新所有打开的 Note Collector 视图
+              this.app.workspace.getLeavesOfType("note-collector-view").forEach((leaf) => {
+                if (leaf.view instanceof NoteCollectorView) {
+                  leaf.view.onOpen();
+                }
+              });
+              
               this.display();
             }
           },
@@ -201,21 +217,93 @@ var NoteCollectorSettingTab = class extends import_obsidian.PluginSettingTab {
         );
         modal.open();
       }));
+      setting.addButton((button) => button.setIcon("eraser")
+        .setTooltip("\u6E05\u7A7A\u6536\u96C6\u7BB1")
+        .onClick(async () => {
+          // 创建确认清空的 Modal
+          const confirmClearModal = new import_obsidian.Modal(this.app);
+          confirmClearModal.title = "确认清空";
+          confirmClearModal.contentEl.createEl("p", { text: "\u786E\u5B9A\u8981\u6E05\u7A7A\u8FD9\u4E2A\u6536\u96C6\u7BB1\u5417\uFF1F\u6240\u6709\u76F8\u5173\u7684\u6536\u85CF\u5185\u5BB9\u5C06\u88AB\u5220\u9664\u3002" });
+
+          confirmClearModal.contentEl.createEl("button", {
+            text: "确认",
+            cls: "mod-warning",
+            onclick: async () => {
+              this.plugin.settings.fragments = this.plugin.settings.fragments.filter(
+                (f) => f.collectionId !== collection.id
+              );
+              await this.plugin.saveSettings();
+              
+              // 刷新所有��开的 Note Collector 视图
+              this.app.workspace.getLeavesOfType("note-collector-view").forEach((leaf) => {
+                if (leaf.view instanceof NoteCollectorView) {
+                  leaf.view.refresh();
+                }
+              });
+              
+              new import_obsidian.Notice("\u6536\u96C6\u7BB1\u5DF2\u6E05\u7A7A");
+              this.display(); // 刷新设置界面
+              confirmClearModal.close(); // 关闭确认 Modal
+            }
+          });
+
+          confirmClearModal.contentEl.createEl("button", {
+            text: "取消",
+            cls: "mod-cancel",
+            onclick: () => {
+              confirmClearModal.close(); // 关闭 Modal
+            }
+          });
+
+          confirmClearModal.open(); // 打开确认 Modal
+        }));
+
+      // 删除收集箱按钮
       setting.addButton((button) => button.setIcon("trash").setTooltip("\u5220\u9664").onClick(async () => {
-        if (confirm("\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u4E2A\u6536\u96C6\u7BB1\u5417\uFF1F\u6240\u6709\u76F8\u5173\u7684\u6536\u85CF\u5185\u5BB9\u4E5F\u4F1A\u88AB\u5220\u9664\u3002")) {
-          this.plugin.settings.collections = this.plugin.settings.collections.filter(
-            (c) => c.id !== collection.id
-          );
-          this.plugin.settings.fragments = this.plugin.settings.fragments.filter(
-            (f) => f.collectionId !== collection.id
-          );
-          if (this.plugin.settings.defaultCollectionId === collection.id) {
-            this.plugin.settings.defaultCollectionId = null;
+        // 创建确认删除的 Modal
+        const confirmDeleteModal = new import_obsidian.Modal(this.app);
+        confirmDeleteModal.title = "确认删除";
+        confirmDeleteModal.contentEl.createEl("p", { text: "\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u4E2A\u6536\u96C6\u7BB1\u5417\uFF1F\u6240\u6709\u76F8\u5173\u7684\u6536\u85CF\u5185\u5BB9\u4E5F\u4F1A\u88AB\u5220\u9664\u3002" });
+
+        confirmDeleteModal.contentEl.createEl("button", {
+          text: "确认",
+          cls: "mod-warning",
+          onclick: async () => {
+            // 删除收集箱和相关片段
+            this.plugin.settings.collections = this.plugin.settings.collections.filter(
+              (c) => c.id !== collection.id
+            );
+            this.plugin.settings.fragments = this.plugin.settings.fragments.filter(
+              (f) => f.collectionId !== collection.id
+            );
+            if (this.plugin.settings.defaultCollectionId === collection.id) {
+              this.plugin.settings.defaultCollectionId = null;
+            }
+            await this.plugin.saveSettings();
+
+            // 刷新所有打开的 Note Collector 视图
+            this.app.workspace.getLeavesOfType("note-collector-view").forEach((leaf) => {
+              if (leaf.view instanceof NoteCollectorView) {
+                leaf.view.onOpen(); // 确保视图更新
+              }
+            });
+
+            this.display(); // 刷新设置界面
+            confirmDeleteModal.close(); // 关闭确认 Modal
           }
-          await this.plugin.saveSettings();
-          this.display();
-        }
+        });
+
+        confirmDeleteModal.contentEl.createEl("button", {
+          text: "取消",
+          cls: "mod-cancel",
+          onclick: () => {
+            confirmDeleteModal.close(); // 关闭 Modal
+          }
+        });
+
+        confirmDeleteModal.open(); // 打开确认 Modal
       }));
+
       if (this.plugin.settings.defaultCollectionId !== collection.id) {
         setting.addButton((button) => button.setIcon("star").setTooltip("\u8BBE\u4E3A\u9ED8\u8BA4").onClick(async () => {
           this.plugin.settings.defaultCollectionId = collection.id;
@@ -232,6 +320,7 @@ var CollectionModal = class extends import_obsidian.Modal {
     this.callback = callback;
     this.collection = collection;
   }
+  
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
@@ -240,32 +329,57 @@ var CollectionModal = class extends import_obsidian.Modal {
     } else {
       contentEl.createEl("h2", { text: "\u521B\u5EFA\u65B0\u6536\u96C6\u7BB1" });
     }
-    new import_obsidian.Setting(contentEl).setName("\u540D\u79F0").setDesc("\u8F93\u5165\u6536\u96C6\u7BB1\u540D\u79F0").addText((text) => {
-      var _a;
-      this.nameInput = text.inputEl;
-      text.setValue(((_a = this.collection) == null ? void 0 : _a.name) || "");
-      return text;
-    });
-    new import_obsidian.Setting(contentEl).setName("\u63CF\u8FF0").setDesc("\u8F93\u5165\u6536\u96C6\u7BB1\u63CF\u8FF0\uFF08\u53EF\u9009\uFF09").addTextArea((text) => {
-      var _a;
-      this.descInput = text.inputEl;
-      text.setValue(((_a = this.collection) == null ? void 0 : _a.description) || "");
-      return text;
-    });
-    new import_obsidian.Setting(contentEl).addButton((btn) => btn.setButtonText("\u4FDD\u5B58").setCta().onClick(() => {
-      const name = this.nameInput.value.trim();
-      const description = this.descInput.value.trim();
-      if (!name) {
-        new import_obsidian.Notice("\u8BF7\u8F93\u5165\u6536\u96C6\u7BB1\u540D\u79F0");
-        return;
-      }
-      this.callback({ name, description });
-      this.close();
-    })).addButton((btn) => btn.setButtonText("\u53D6\u6D88").onClick(() => {
-      this.callback(null);
-      this.close();
-    }));
+    
+    // 修复名称输入字段
+    const nameSettingContainer = contentEl.createDiv();
+    const nameSetting = new import_obsidian.Setting(nameSettingContainer)
+      .setName("\u540D\u79F0")
+      .setDesc("\u8F93\u5165\u6536\u96C6\u7BB1\u540D\u79F0")
+      .addText(text => {
+        this.nameInput = text;
+        text.setValue(this.collection?.name || "");
+        return text;
+      });
+
+    // 修复描述输入字段
+    const descSettingContainer = contentEl.createDiv();
+    const descSetting = new import_obsidian.Setting(descSettingContainer)
+      .setName("\u63CF\u8FF0")
+      .setDesc("\u8F93\u5165\u6536\u96C6\u7BB1\u63CF\u8FF0\uFF08\u53EF\u9009\uFF09")
+      .addTextArea(text => {
+        this.descInput = text;
+        text.setValue(this.collection?.description || "");
+        return text;
+      });
+
+    // 按钮容器
+    const buttonContainer = contentEl.createDiv();
+    new import_obsidian.Setting(buttonContainer)
+      .addButton(btn => 
+        btn.setButtonText("\u4FDD\u5B58")
+          .setCta()
+          .onClick(() => {
+            const name = this.nameInput.getValue().trim();
+            const description = this.descInput.getValue().trim();
+            
+            if (!name) {
+              new import_obsidian.Notice("\u8BF7\u8F93\u5165\u6536\u96C6\u7BB1\u540D\u79F0");
+              return;
+            }
+            
+            this.callback({ name, description });
+            this.close();
+          })
+      )
+      .addButton(btn => 
+        btn.setButtonText("\u53D6\u6D88")
+          .onClick(() => {
+            this.callback(null);
+            this.close();
+          })
+      );
   }
+  
   onClose() {
     const { contentEl } = this;
     contentEl.empty();
@@ -342,27 +456,95 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
     // 渲染片段
     for (const fragment of fragments) {
       const fragmentEl = contentEl.createEl("div", { cls: "fragment-container" });
-      const contentContainer = fragmentEl.createEl("div", { cls: "fragment-content" });
+      
+      // 创建可选择的内容容器
+      const contentContainer = fragmentEl.createEl("div", { 
+        cls: "fragment-content selectable",
+        attr: {
+          'contenteditable': 'true',  // 使内容可以被选择
+          'spellcheck': 'false',      // 禁用拼写检查
+          'data-readonly': 'true'     // 标记为只读用于CSS样式）
+        }
+      });
+      
+      // 渲染 Markdown 内容
       await import_obsidian.MarkdownRenderer.renderMarkdown(
         fragment.content,
         contentContainer,
         "",
         this
       );
+      
+      // 添加只读事件监听器
+      contentContainer.addEventListener('input', (e) => {
+        e.preventDefault();
+        contentContainer.innerHTML = ''; // 清空任何更改
+        // 重新渲染原始内容
+        import_obsidian.MarkdownRenderer.renderMarkdown(
+          fragment.content,
+          contentContainer,
+          "",
+          this
+        );
+      });
+      
+      // 添加提示信息
+      const tipEl = fragmentEl.createEl("div", {
+        cls: "fragment-tip",
+        text: "提示：可以直接选择并拖拽内容到笔记中"
+      });
+      
       const metaEl = fragmentEl.createEl("div", {
         cls: "fragment-meta",
-        text: `\u6536\u85CF\u4E8E: ${new Date(fragment.createdTime).toLocaleString()}`
+        text: `收藏于: ${new Date(fragment.createdTime).toLocaleString()}`
       });
+      
       const backlinkEl = fragmentEl.createEl("div", { cls: "fragment-backlink" });
       const link = backlinkEl.createEl("a", {
-        text: `\u6765\u6E90: ${fragment.sourceFile}`,
-        href: fragment.sourcePath
+        text: `来源: ${fragment.sourceFile}`,
+        href: fragment.sourcePath,
+        cls: "fragment-source-link"
       });
-      link.addEventListener("click", (e) => {
+      link.addEventListener("click", async (e) => {
         e.preventDefault();
-        this.plugin.app.workspace.openLinkText(fragment.sourcePath, "");
+        
+        // 打开文件
+        const sourceLeaf = this.app.workspace.getLeaf();
+        await sourceLeaf.openFile(this.app.vault.getAbstractFileByPath(fragment.sourcePath));
+        
+        // 获取编辑器
+        const editor = sourceLeaf.view.editor;
+        if (editor) {
+          // 使用内容搜索定位到片段位置
+          const content = editor.getValue();
+          const position = content.indexOf(fragment.content);
+          
+          if (position !== -1) {
+            // 计算行号
+            const textBeforeFragment = content.substring(0, position);
+            const lineNumber = textBeforeFragment.split('\n').length - 1;
+            
+            // 滚动到对应位置并高亮
+            editor.setCursor(lineNumber, 0);
+            editor.scrollIntoView({from: {line: lineNumber, ch: 0}, to: {line: lineNumber + fragment.content.split('\n').length, ch: 0}}, true);
+            
+            // 临时高亮显示
+            const highlightId = editor.addHighlight({
+              from: {line: lineNumber, ch: 0},
+              to: {line: lineNumber + fragment.content.split('\n').length - 1, ch: fragment.content.split('\n').slice(-1)[0].length}
+            }, "search-result");
+            
+            // 3秒后移除高亮
+            setTimeout(() => {
+              editor.removeHighlight(highlightId);
+            }, 3000);
+          }
+        }
       });
+      
       const actionsEl = fragmentEl.createEl("div", { cls: "fragment-actions" });
+      
+      // 删除按钮
       const deleteBtn = actionsEl.createEl("button", {
         cls: "delete-button",
         attr: {
@@ -370,11 +552,44 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
         }
       });
       deleteBtn.setText("删除");
-      deleteBtn.addEventListener("click", async () => {
-        if (confirm("\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u6761\u6536\u85CF\u5417\uFF1F")) {
-          await this.plugin.deleteFragment(fragment.id);
-          await this.refresh();
-        }
+      deleteBtn.addEventListener("mousedown", (e) => {
+        // 阻止默认行为和冒泡
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      
+      deleteBtn.addEventListener("click", async (e) => {
+        // 阻止默认行为和冒泡
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // 存储当前活动的编辑器和窗口
+        const activeLeaf = this.app.workspace.activeLeaf;
+
+        // 创建确认删除的 Modal
+        const confirmDeleteModal = new import_obsidian.Modal(this.app);
+        confirmDeleteModal.title = "确认删除";
+        confirmDeleteModal.contentEl.createEl("p", { text: "确定要删除这条收藏吗？" });
+
+        confirmDeleteModal.contentEl.createEl("button", {
+          text: "确认",
+          cls: "mod-warning",
+          onclick: async () => {
+            await this.plugin.deleteFragment(fragment.id);
+            await this.refresh();
+            confirmDeleteModal.close();
+          }
+        });
+
+        confirmDeleteModal.contentEl.createEl("button", {
+          text: "取消",
+          cls: "mod-cancel",
+          onclick: () => {
+            confirmDeleteModal.close();
+          }
+        });
+
+        confirmDeleteModal.open();
       });
     }
   }
