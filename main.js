@@ -461,9 +461,9 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
       const contentContainer = fragmentEl.createEl("div", { 
         cls: "fragment-content selectable",
         attr: {
-          'contenteditable': 'true',  // 使内容可以被选择
-          'spellcheck': 'false',      // 禁用拼写检查
-          'data-readonly': 'true'     // 标记为只读用于CSS样式）
+          'contenteditable': 'true',
+          'spellcheck': 'false',
+          'data-readonly': 'true'
         }
       });
       
@@ -474,6 +474,104 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
         "",
         this
       );
+      
+      // 创建按钮容器
+      const buttonContainer = fragmentEl.createEl("div", { cls: "fragment-actions" });
+
+      // 添加展开/收起按钮
+      const toggleButton = buttonContainer.createEl("button", {
+        text: "展开",
+        cls: "toggle-button"
+      });
+
+      toggleButton.addEventListener('click', () => {
+        contentContainer.classList.toggle('expanded'); // 切换展开状态
+        toggleButton.textContent = contentContainer.classList.contains('expanded') ? "收起" : "展开"; // 更新按钮文本
+      });
+
+      // 添加删除按钮
+      const deleteButton = buttonContainer.createEl("button", {
+        text: "删除",
+        cls: "delete-button"
+      });
+
+      deleteButton.addEventListener('click', async () => {
+        // 删除逻辑
+        const confirmDeleteModal = new import_obsidian.Modal(this.app);
+        confirmDeleteModal.title = "确认删除";
+        confirmDeleteModal.contentEl.createEl("p", { text: "确定要删除这条收藏吗？" });
+
+        confirmDeleteModal.contentEl.createEl("button", {
+          text: "确认",
+          cls: "mod-warning",
+          onclick: async () => {
+            await this.plugin.deleteFragment(fragment.id);
+            await this.refresh();
+            confirmDeleteModal.close();
+          }
+        });
+
+        confirmDeleteModal.contentEl.createEl("button", {
+          text: "取消",
+          cls: "mod-cancel",
+          onclick: () => {
+            confirmDeleteModal.close();
+          }
+        });
+
+        confirmDeleteModal.open();
+      });
+
+      // 将按钮容器添加到片段元素中
+      fragmentEl.appendChild(buttonContainer);
+
+      // 添加拖动事件
+      contentContainer.setAttribute('draggable', 'true');
+      contentContainer.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', fragment.content);
+        e.dataTransfer.effectAllowed = 'copy';
+        
+        // 视觉反馈
+        contentContainer.style.opacity = '0.5';
+        contentContainer.style.border = '2px dashed var(--interactive-accent)';
+        
+        // 更改光标样式
+        document.body.classList.add('dragging');
+      });
+
+      contentContainer.addEventListener('dragend', () => {
+        // 恢复样式
+        contentContainer.style.opacity = '1';
+        contentContainer.style.border = 'none';
+        
+        // 恢复光标样式
+        document.body.classList.remove('dragging');
+      });
+
+      // 添加放置事件
+      contentContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+
+      contentContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const content = e.dataTransfer.getData('text/plain');
+        const editor = this.app.workspace.activeLeaf.view.editor;
+        if (editor) {
+          const cursor = editor.getCursor();
+          editor.replaceRange(content, cursor);
+        }
+      });
+      
+      // 取消拖动操作
+      contentContainer.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          contentContainer.style.opacity = '1';
+          contentContainer.style.border = 'none';
+          document.body.classList.remove('dragging'); // 恢复光标样式
+        }
+      });
       
       // 添加只读事件监听器
       contentContainer.addEventListener('input', (e) => {
@@ -540,56 +638,6 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
             }, 3000);
           }
         }
-      });
-      
-      const actionsEl = fragmentEl.createEl("div", { cls: "fragment-actions" });
-      
-      // 删除按钮
-      const deleteBtn = actionsEl.createEl("button", {
-        cls: "delete-button",
-        attr: {
-          'aria-label': '删除'
-        }
-      });
-      deleteBtn.setText("删除");
-      deleteBtn.addEventListener("mousedown", (e) => {
-        // 阻止默认行为和冒泡
-        e.preventDefault();
-        e.stopPropagation();
-      });
-      
-      deleteBtn.addEventListener("click", async (e) => {
-        // 阻止默认行为和冒泡
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // 存储当前活动的编辑器和窗口
-        const activeLeaf = this.app.workspace.activeLeaf;
-
-        // 创建确认删除的 Modal
-        const confirmDeleteModal = new import_obsidian.Modal(this.app);
-        confirmDeleteModal.title = "确认删除";
-        confirmDeleteModal.contentEl.createEl("p", { text: "确定要删除这条收藏吗？" });
-
-        confirmDeleteModal.contentEl.createEl("button", {
-          text: "确认",
-          cls: "mod-warning",
-          onclick: async () => {
-            await this.plugin.deleteFragment(fragment.id);
-            await this.refresh();
-            confirmDeleteModal.close();
-          }
-        });
-
-        confirmDeleteModal.contentEl.createEl("button", {
-          text: "取消",
-          cls: "mod-cancel",
-          onclick: () => {
-            confirmDeleteModal.close();
-          }
-        });
-
-        confirmDeleteModal.open();
       });
     }
   }

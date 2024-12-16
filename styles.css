@@ -46,6 +46,13 @@
     color: var(--text-normal);
     font-size: 0.95em;
     line-height: 1.6;
+    max-height: 150px;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.fragment-content.expanded {
+    max-height: none;
 }
 
 .fragment-meta {
@@ -290,4 +297,9 @@
 
 .fragment-source-link:active {
     transform: translateY(1px);
+}
+
+/* 拖动时的光标样式 */
+.dragging {
+    cursor: grabbing; /* 拖动时的光标样式 */
 }
