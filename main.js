@@ -234,7 +234,7 @@ var NoteCollectorSettingTab = class extends import_obsidian.PluginSettingTab {
               );
               await this.plugin.saveSettings();
               
-              // 刷新所有��开的 Note Collector 视图
+              // 刷新所有打开的 Note Collector 视图
               this.app.workspace.getLeavesOfType("note-collector-view").forEach((leaf) => {
                 if (leaf.view instanceof NoteCollectorView) {
                   leaf.view.refresh();
@@ -478,6 +478,49 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
       // 创建按钮容器
       const buttonContainer = fragmentEl.createEl("div", { cls: "fragment-actions" });
 
+      // 添加来源按钮
+      const sourceButton = buttonContainer.createEl("button", {
+        text: "来源",
+        cls: "source-button"
+      });
+
+      sourceButton.addEventListener("click", async (e) => {
+        e.preventDefault();
+        
+        // 打开文件
+        const sourceLeaf = this.app.workspace.getLeaf();
+        await sourceLeaf.openFile(this.app.vault.getAbstractFileByPath(fragment.sourcePath));
+        
+        // 获取编辑器
+        const editor = sourceLeaf.view.editor;
+        if (editor) {
+          // 使用内容搜索定位到片段位置
+          const content = editor.getValue();
+          const position = content.indexOf(fragment.content);
+          
+          if (position !== -1) {
+            // 计算行号
+            const textBeforeFragment = content.substring(0, position);
+            const lineNumber = textBeforeFragment.split('\n').length - 1;
+            
+            // 滚动到对应位置并高亮
+            editor.setCursor(lineNumber, 0);
+            editor.scrollIntoView({from: {line: lineNumber, ch: 0}, to: {line: lineNumber + fragment.content.split('\n').length, ch: 0}}, true);
+            
+            // 临时高亮显示
+            const highlightId = editor.addHighlight({
+              from: {line: lineNumber, ch: 0},
+              to: {line: lineNumber + fragment.content.split('\n').length - 1, ch: fragment.content.split('\n').slice(-1)[0].length}
+            }, "search-result");
+            
+            // 3秒后移除高亮
+            setTimeout(() => {
+              editor.removeHighlight(highlightId);
+            }, 3000);
+          }
+        }
+      });
+
       // 添加展开/收起按钮
       const toggleButton = buttonContainer.createEl("button", {
         text: "展开",
@@ -586,58 +629,9 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
         );
       });
       
-      // 添加提示信息
-      const tipEl = fragmentEl.createEl("div", {
-        cls: "fragment-tip",
-        text: "提示：可以直接选择并拖拽内容到笔记中"
-      });
-      
       const metaEl = fragmentEl.createEl("div", {
         cls: "fragment-meta",
         text: `收藏于: ${new Date(fragment.createdTime).toLocaleString()}`
-      });
-      
-      const backlinkEl = fragmentEl.createEl("div", { cls: "fragment-backlink" });
-      const link = backlinkEl.createEl("a", {
-        text: `来源: ${fragment.sourceFile}`,
-        href: fragment.sourcePath,
-        cls: "fragment-source-link"
-      });
-      link.addEventListener("click", async (e) => {
-        e.preventDefault();
-        
-        // 打开文件
-        const sourceLeaf = this.app.workspace.getLeaf();
-        await sourceLeaf.openFile(this.app.vault.getAbstractFileByPath(fragment.sourcePath));
-        
-        // 获取编辑器
-        const editor = sourceLeaf.view.editor;
-        if (editor) {
-          // 使用内容搜索定位到片段位置
-          const content = editor.getValue();
-          const position = content.indexOf(fragment.content);
-          
-          if (position !== -1) {
-            // 计算行号
-            const textBeforeFragment = content.substring(0, position);
-            const lineNumber = textBeforeFragment.split('\n').length - 1;
-            
-            // 滚动到对应位置并高亮
-            editor.setCursor(lineNumber, 0);
-            editor.scrollIntoView({from: {line: lineNumber, ch: 0}, to: {line: lineNumber + fragment.content.split('\n').length, ch: 0}}, true);
-            
-            // 临时高亮显示
-            const highlightId = editor.addHighlight({
-              from: {line: lineNumber, ch: 0},
-              to: {line: lineNumber + fragment.content.split('\n').length - 1, ch: fragment.content.split('\n').slice(-1)[0].length}
-            }, "search-result");
-            
-            // 3秒后移除高亮
-            setTimeout(() => {
-              editor.removeHighlight(highlightId);
-            }, 3000);
-          }
-        }
       });
     }
   }
