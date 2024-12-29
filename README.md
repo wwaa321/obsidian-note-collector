@@ -139,6 +139,19 @@ Note Collector is an Obsidian plugin focused on managing note fragments. It allo
 ---
 
 ## 更新日志
+### v1.0.3更新
+1. 移除卡片内的提示信息
+2. 将原来“来源”链接改为按钮的形式
+
+### v1.0.2更新
+1. 增加了卡片拖动功能，鼠标移入卡片内容部分空白区域进行拖动
+2. 增加卡片折叠功能
+
+### v1.0.1更新
+1. 优化卡片反向链接跳转，现在可以跳转到原笔记的对应位置
+2. 增加卡片内容选取功能，可以将卡片内容拖拽到笔记中
+3. 增加收集箱的清空功能，可以在配置页清空收集箱卡片
+
 
 ### v1.0.0
 - 初始版本发布
@@ -146,4 +159,4 @@ Note Collector is an Obsidian plugin focused on managing note fragments. It allo
 
 ## License
 
-MIT License © 2024 [Your Name]
+MIT License © 2024
