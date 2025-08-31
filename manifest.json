@@ -1,9 +1,9 @@
 {
     "id": "obsidian-note-collector",
     "name": "Note Collector",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "minAppVersion": "0.15.0",
-    "description": "Collect and manage important note fragments with backlinks",
-    "author": "Piti",
+    "description": "Note Collector 是一款专为 Obsidian 用户设计的笔记片段管理工具。它帮助您从海量笔记中快速提取关键内容，生成可管理的“卡片”，并支持灵活分类、便捷回溯与自由复用，让知识收集与创作过程更加流畅高效。",
+    "author": "MOAONO数字生活专家",
     "isDesktopOnly": false
 }

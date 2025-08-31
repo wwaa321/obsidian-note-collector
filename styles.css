@@ -227,6 +227,73 @@
     padding-right: 30px;
 }
 
+/* 搜索框样式 */
+.search-container {
+    margin: 12px 0;
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    min-height: 32px;
+    padding: 6px 30px 6px 12px;
+    border-radius: 6px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
+    font-size: 14px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+}
+
+.search-input:hover {
+    border-color: var(--interactive-accent);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px var(--background-modifier-border-hover);
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.search-clear:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+.search-results-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 8px 0;
+    text-align: center;
+}
+
+.search-highlight {
+    background-color: var(--text-highlight-bg);
+    color: var(--text-highlight-bg-active);
+    padding: 1px 2px;
+    border-radius: 2px;
+}
+
 .collection-selector select:hover {
     border-color: var(--interactive-accent);
 }

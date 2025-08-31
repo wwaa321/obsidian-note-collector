@@ -424,6 +424,38 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
       this.currentCollectionId = e.target.value;
       await this.refresh();
     });
+
+    // 添加搜索框
+    const searchContainer = headerEl.createDiv("search-container");
+    const searchInput = searchContainer.createEl("input", {
+      type: "text",
+      cls: "search-input",
+      placeholder: "搜索收藏内容..."
+    });
+    
+    const searchClear = searchContainer.createEl("button", {
+      cls: "search-clear",
+      text: "×"
+    });
+    
+    // 搜索功能
+    this.searchTerm = "";
+    
+    searchInput.addEventListener("input", async (e) => {
+      this.searchTerm = e.target.value.toLowerCase().trim();
+      searchClear.style.display = this.searchTerm ? "block" : "none";
+      await this.refresh();
+    });
+    
+    searchClear.addEventListener("click", async () => {
+      searchInput.value = "";
+      this.searchTerm = "";
+      searchClear.style.display = "none";
+      await this.refresh();
+    });
+    
+    // 初始隐藏清除按钮
+    searchClear.style.display = "none";
     
     headerEl.createEl("h4", { text: "收藏内容" });
     const contentEl = container.createDiv("note-collector-content");
@@ -441,12 +473,39 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
     }
     
     // 根据当前选中的收集箱过滤内容
-    const fragments = this.plugin.settings.fragments.filter(
+    let fragments = this.plugin.settings.fragments.filter(
       f => f.collectionId === this.currentCollectionId
     );
     
+    // 搜索过滤
+    if (this.searchTerm) {
+      fragments = fragments.filter(fragment => 
+        fragment.content.toLowerCase().includes(this.searchTerm) ||
+        fragment.sourceFile.toLowerCase().includes(this.searchTerm)
+      );
+    }
+    
+    // 显示搜索结果信息
+    const totalCount = this.plugin.settings.fragments.filter(
+      f => f.collectionId === this.currentCollectionId
+    ).length;
+    
+    if (this.searchTerm) {
+      const searchInfo = contentEl.createEl("div", {
+        cls: "search-results-info",
+        text: `找到 ${fragments.length} / ${totalCount} 条结果`
+      });
+    }
+    
     if (!fragments || fragments.length === 0) {
-      contentEl.createEl("p", { text: "还没有收藏任何内容" });
+      if (this.searchTerm) {
+        contentEl.createEl("p", { 
+          text: `未找到包含 "${this.searchTerm}" 的收藏内容`, 
+          style: "text-align: center; color: var(--text-muted); font-style: italic;" 
+        });
+      } else {
+        contentEl.createEl("p", { text: "还没有收藏任何内容" });
+      }
       return;
     }
     
@@ -467,13 +526,15 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
         }
       });
       
-      // 渲染 Markdown 内容
-      await import_obsidian.MarkdownRenderer.renderMarkdown(
-        fragment.content,
-        contentContainer,
-        "",
-        this
-      );
+      // 渲染 Markdown 内容，支持搜索高亮
+      let contentToRender = fragment.content;
+      if (this.searchTerm) {
+        // 简单的搜索高亮实现
+        const regex = new RegExp(`(${this.searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        contentToRender = contentToRender.replace(regex, '<mark class="search-highlight">$1</mark>');
+      }
+      
+      contentContainer.innerHTML = contentToRender;
       
       // 创建按钮容器
       const buttonContainer = fragmentEl.createEl("div", { cls: "fragment-actions" });
