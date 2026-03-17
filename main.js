@@ -144,6 +144,45 @@ var NoteCollectorPlugin = class extends import_obsidian.Plugin {
     this.settings.fragments = this.settings.fragments.filter((f) => f.id !== id);
     await this.saveSettings();
   }
+  // 手动添加灵感片段的方法
+  async collectManualFragment(content, collectionId) {
+    const fragment = {
+      id: Date.now().toString(),
+      content,
+      sourceFile: "手动输入",
+      sourcePath: "",
+      createdTime: Date.now(),
+      collectionId,
+      position: {
+        line: 0,
+        offset: 0
+      }
+    };
+    this.settings.fragments.push(fragment);
+    await this.saveSettings();
+    const collection = this.settings.collections.find((c) => c.id === collectionId);
+    new import_obsidian.Notice(`灵感已添加到"${(collection == null ? void 0 : collection.name) || "未知收集箱"}"`);
+    this.app.workspace.getLeavesOfType("note-collector-view").forEach((leaf) => {
+      if (leaf.view instanceof NoteCollectorView) {
+        leaf.view.refresh();
+      }
+    });
+  }
+  // 更新灵感片段内容
+  async updateFragment(fragmentId, newContent, newCollectionId) {
+    const fragment = this.settings.fragments.find((f) => f.id === fragmentId);
+    if (fragment) {
+      fragment.content = newContent;
+      fragment.collectionId = newCollectionId;
+      await this.saveSettings();
+      new import_obsidian.Notice("灵感内容已更新");
+      this.app.workspace.getLeavesOfType("note-collector-view").forEach((leaf) => {
+        if (leaf.view instanceof NoteCollectorView) {
+          leaf.view.refresh();
+        }
+      });
+    }
+  }
 };
 var NoteCollectorSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
@@ -385,6 +424,100 @@ var CollectionModal = class extends import_obsidian.Modal {
     contentEl.empty();
   }
 };
+// 灵感输入模态窗口类
+var InspirationModal = class extends import_obsidian.Modal {
+  constructor(app, plugin, currentCollectionId, callback, fragment) {
+    super(app);
+    this.plugin = plugin;
+    this.currentCollectionId = currentCollectionId;
+    this.callback = callback;
+    this.fragment = fragment; // 编辑模式下传入的片段对象
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass("inspiration-modal");
+
+    // 根据是否有 fragment 判断是编辑还是新增模式
+    const isEditMode = !!this.fragment;
+    contentEl.createEl("h2", { text: isEditMode ? "编辑灵感" : "添加灵感" });
+
+    // 内容输入区域
+    const contentSettingContainer = contentEl.createDiv();
+    new import_obsidian.Setting(contentSettingContainer)
+      .setName("灵感内容")
+      .setDesc("输入你的灵感内容");
+
+    this.contentInput = contentSettingContainer.createEl("textarea", {
+      cls: "inspiration-textarea",
+      attr: {
+        placeholder: "在这里输入你的灵感...",
+        rows: "6"
+      }
+    });
+
+    // 编辑模式下预填充内容（将 Markdown 硬换行转换回普通换行）
+    if (isEditMode) {
+      const originalContent = this.fragment.content.replace(/  \n/g, '\n');
+      this.contentInput.value = originalContent;
+    }
+
+    // 收集箱选择
+    const collectionSettingContainer = contentEl.createDiv();
+    new import_obsidian.Setting(collectionSettingContainer)
+      .setName("目标收集箱")
+      .addDropdown(dropdown => {
+        this.collectionDropdown = dropdown;
+        this.plugin.settings.collections.forEach(collection => {
+          dropdown.addOption(collection.id, collection.name);
+        });
+        // 编辑模式下选中当前片段所属的收集箱
+        dropdown.setValue(isEditMode ? this.fragment.collectionId : this.currentCollectionId);
+      });
+
+    // 按钮区域
+    const buttonContainer = contentEl.createDiv();
+    new import_obsidian.Setting(buttonContainer)
+      .addButton(btn => btn
+        .setButtonText("保存")
+        .setCta()
+        .onClick(async () => {
+          let content = this.contentInput.value.trim();
+          const collectionId = this.collectionDropdown.getValue();
+
+          if (!content) {
+            new import_obsidian.Notice("请输入灵感内容");
+            return;
+          }
+
+          // 将换行符转换为 Markdown 硬换行格式（两个空格 + 换行符）
+          content = content.replace(/\n/g, '  \n');
+
+          if (isEditMode) {
+            // 编辑模式：更新现有片段
+            await this.plugin.updateFragment(this.fragment.id, content, collectionId);
+          } else {
+            // 新增模式：创建新片段
+            await this.plugin.collectManualFragment(content, collectionId);
+          }
+
+          if (this.callback) {
+            await this.callback();
+          }
+
+          this.close();
+        }))
+      .addButton(btn => btn
+        .setButtonText("取消")
+        .onClick(() => this.close()));
+  }
+
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
 var NoteCollectorView = class extends import_obsidian.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
@@ -423,6 +556,25 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
     select.addEventListener("change", async (e) => {
       this.currentCollectionId = e.target.value;
       await this.refresh();
+    });
+
+    // 添加"+"按钮，用于打开添加灵感的模态窗口
+    const addButton = selectContainer.createEl("button", {
+      cls: "add-inspiration-button",
+      text: "+"
+    });
+    addButton.setAttribute("aria-label", "添加灵感");
+
+    addButton.addEventListener("click", () => {
+      const modal = new InspirationModal(
+        this.app,
+        this.plugin,
+        this.currentCollectionId,
+        async () => {
+          await this.refresh();
+        }
+      );
+      modal.open();
     });
 
     // 添加搜索框
@@ -526,61 +678,89 @@ var NoteCollectorView = class extends import_obsidian.ItemView {
         }
       });
       
-      // 渲染 Markdown 内容，支持搜索高亮
-      let contentToRender = fragment.content;
+      // 渲染 Markdown 内容
+      await import_obsidian.MarkdownRenderer.renderMarkdown(
+        fragment.content,
+        contentContainer,
+        "",
+        this
+      );
+
+      // 搜索高亮（在渲染后的 HTML 中进行）
       if (this.searchTerm) {
-        // 简单的搜索高亮实现
         const regex = new RegExp(`(${this.searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        contentToRender = contentToRender.replace(regex, '<mark class="search-highlight">$1</mark>');
+        contentContainer.innerHTML = contentContainer.innerHTML.replace(regex, '<mark class="search-highlight">$1</mark>');
       }
-      
-      contentContainer.innerHTML = contentToRender;
-      
+
       // 创建按钮容器
       const buttonContainer = fragmentEl.createEl("div", { cls: "fragment-actions" });
 
-      // 添加来源按钮
-      const sourceButton = buttonContainer.createEl("button", {
-        text: "来源",
-        cls: "source-button"
-      });
+      // 判断是否为手工输入的卡片
+      const isManualInput = fragment.sourceFile === "手动输入";
 
-      sourceButton.addEventListener("click", async (e) => {
-        e.preventDefault();
-        
-        // 打开文件
-        const sourceLeaf = this.app.workspace.getLeaf();
-        await sourceLeaf.openFile(this.app.vault.getAbstractFileByPath(fragment.sourcePath));
-        
-        // 获取编辑器
-        const editor = sourceLeaf.view.editor;
-        if (editor) {
-          // 使用内容搜索定位到片段位置
-          const content = editor.getValue();
-          const position = content.indexOf(fragment.content);
+      if (isManualInput) {
+        // 手工输入卡片：显示编辑按钮
+        const editButton = buttonContainer.createEl("button", {
+          text: "编辑",
+          cls: "edit-button"
+        });
+
+        editButton.addEventListener("click", () => {
+          const modal = new InspirationModal(
+            this.app,
+            this.plugin,
+            this.currentCollectionId,
+            async () => {
+              await this.refresh();
+            },
+            fragment // 传入片段对象，进入编辑模式
+          );
+          modal.open();
+        });
+      } else {
+        // 从笔记选取的卡片：显示来源按钮
+        const sourceButton = buttonContainer.createEl("button", {
+          text: "来源",
+          cls: "source-button"
+        });
+
+        sourceButton.addEventListener("click", async (e) => {
+          e.preventDefault();
           
-          if (position !== -1) {
-            // 计算行号
-            const textBeforeFragment = content.substring(0, position);
-            const lineNumber = textBeforeFragment.split('\n').length - 1;
+          // 打开文件
+          const sourceLeaf = this.app.workspace.getLeaf();
+          await sourceLeaf.openFile(this.app.vault.getAbstractFileByPath(fragment.sourcePath));
+          
+          // 获取编辑器
+          const editor = sourceLeaf.view.editor;
+          if (editor) {
+            // 使用内容搜索定位到片段位置
+            const content = editor.getValue();
+            const position = content.indexOf(fragment.content);
             
-            // 滚动到对应位置并高亮
-            editor.setCursor(lineNumber, 0);
-            editor.scrollIntoView({from: {line: lineNumber, ch: 0}, to: {line: lineNumber + fragment.content.split('\n').length, ch: 0}}, true);
-            
-            // 临时高亮显示
-            const highlightId = editor.addHighlight({
-              from: {line: lineNumber, ch: 0},
-              to: {line: lineNumber + fragment.content.split('\n').length - 1, ch: fragment.content.split('\n').slice(-1)[0].length}
-            }, "search-result");
-            
-            // 3秒后移除高亮
-            setTimeout(() => {
-              editor.removeHighlight(highlightId);
-            }, 3000);
+            if (position !== -1) {
+              // 计算行号
+              const textBeforeFragment = content.substring(0, position);
+              const lineNumber = textBeforeFragment.split('\n').length - 1;
+              
+              // 滚动到对应位置并高亮
+              editor.setCursor(lineNumber, 0);
+              editor.scrollIntoView({from: {line: lineNumber, ch: 0}, to: {line: lineNumber + fragment.content.split('\n').length, ch: 0}}, true);
+              
+              // 临时高亮显示
+              const highlightId = editor.addHighlight({
+                from: {line: lineNumber, ch: 0},
+                to: {line: lineNumber + fragment.content.split('\n').length - 1, ch: fragment.content.split('\n').slice(-1)[0].length}
+              }, "search-result");
+              
+              // 3秒后移除高亮
+              setTimeout(() => {
+                editor.removeHighlight(highlightId);
+              }, 3000);
+            }
           }
-        }
-      });
+        });
+      }
 
       // 添加展开/收起按钮
       const toggleButton = buttonContainer.createEl("button", {

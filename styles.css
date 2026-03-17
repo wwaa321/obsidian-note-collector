@@ -110,6 +110,15 @@
     background-color: var(--background-modifier-error-hover);
 }
 
+.fragment-actions .edit-button {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.fragment-actions .edit-button:hover {
+    background-color: var(--interactive-accent-hover);
+}
+
 .note-collector-view .fragment-actions {
   display: flex;
   gap: 8px;
@@ -203,10 +212,13 @@
 
 .collection-selector {
     margin: 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .collection-selector select {
-    width: 100%;
+    flex: 1;
     min-height: 32px;
     padding: 6px 12px;
     border-radius: 6px;
@@ -225,6 +237,34 @@
     background-position: right 12px center;
     background-size: 8px auto;
     padding-right: 30px;
+}
+
+/* 添加灵感按钮样式 */
+.add-inspiration-button {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 6px;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.add-inspiration-button:hover {
+    background-color: var(--interactive-accent-hover);
+    transform: scale(1.05);
+}
+
+.add-inspiration-button:active {
+    transform: scale(0.95);
 }
 
 /* 搜索框样式 */
@@ -369,4 +409,37 @@
 /* 拖动时的光标样式 */
 .dragging {
     cursor: grabbing; /* 拖动时的光标样式 */
+}
+
+/* 灵感模态窗口样式 */
+.inspiration-modal {
+    padding: 16px;
+}
+
+.inspiration-modal .setting-item {
+    border-top: none;
+    padding-top: 8px;
+}
+
+.inspiration-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
+    font-size: 14px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.inspiration-textarea:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.inspiration-textarea::placeholder {
+    color: var(--text-muted);
 }
